@@ -1,0 +1,461 @@
+[
+    {
+        "id": "d9b281315f215091",
+        "type": "tab",
+        "label": "Eastron Pooling 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "0c7f46bd3c753bc4",
+        "type": "change",
+        "z": "d9b281315f215091",
+        "name": "Remove unwanted fields",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "modbusRequest",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "responseBuffer",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "queueLengthByUnitId",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "queueUnitId",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "unitId",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "_msgid",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "values",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "objectResults",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "buffer",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1090,
+        "y": 300,
+        "wires": [
+            [
+                "377bcc60e55c17af"
+            ]
+        ]
+    },
+    {
+        "id": "51670232d25a1939",
+        "type": "mqtt out",
+        "z": "d9b281315f215091",
+        "name": "AWS IoT Broker Publisher",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "8059d6c2e5ed5f91",
+        "x": 870,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "602aff41b2c49128",
+        "type": "python-function",
+        "z": "d9b281315f215091",
+        "name": "Populate Payload",
+        "func": "import struct\nfrom datetime import datetime\nr = msg\nname = msg['modbusRequest']['value']['name']\ntopic = msg['modbusRequest']['value']['topic']\nreading = msg['modbusRequest']['value']['reading']\nvalue = msg['payload']\nvalue = value['value']\nnow = datetime.now()\nstamp = f'{now.year}/{now.month}/{now.day} {now.hour}:{now.minute}:{now.second}'\nr.update({'payload':{'timestamp':stamp,'name':name,'value':value,'reading':reading}})\nr['timestamp'] = stamp\nr.update({'topic':topic})\nreturn r",
+        "outputs": 1,
+        "x": 830,
+        "y": 300,
+        "wires": [
+            [
+                "0c7f46bd3c753bc4"
+            ]
+        ]
+    },
+    {
+        "id": "e82e44225dd460fc",
+        "type": "status",
+        "z": "d9b281315f215091",
+        "name": "AWS Broker Status",
+        "scope": [
+            "51670232d25a1939"
+        ],
+        "x": 250,
+        "y": 420,
+        "wires": [
+            [
+                "c9df5d78d5cd93e0"
+            ]
+        ]
+    },
+    {
+        "id": "c9df5d78d5cd93e0",
+        "type": "queue",
+        "z": "d9b281315f215091",
+        "name": "Storage and Forward",
+        "connected": "^connected",
+        "connectedType": "re",
+        "disconnected": "",
+        "disconnectedType": "re",
+        "sqlite": "/home/pi/queue.sqlite",
+        "x": 580,
+        "y": 420,
+        "wires": [
+            [
+                "51670232d25a1939"
+            ]
+        ]
+    },
+    {
+        "id": "0b9806199a761211",
+        "type": "buffer-parser",
+        "z": "d9b281315f215091",
+        "name": "Float Converter",
+        "data": "payload",
+        "dataType": "msg",
+        "specification": "spec",
+        "specificationType": "ui",
+        "items": [
+            {
+                "type": "floatbe",
+                "name": "value",
+                "offset": 0,
+                "length": 1,
+                "offsetbit": 0,
+                "scale": "1",
+                "mask": ""
+            }
+        ],
+        "swap1": "",
+        "swap2": "",
+        "swap3": "",
+        "swap1Type": "swap",
+        "swap2Type": "swap",
+        "swap3Type": "swap",
+        "msgProperty": "payload",
+        "msgPropertyType": "str",
+        "resultType": "keyvalue",
+        "resultTypeType": "return",
+        "multipleResult": false,
+        "fanOutMultipleResult": false,
+        "setTopic": true,
+        "outputs": 1,
+        "x": 480,
+        "y": 280,
+        "wires": [
+            [
+                "602aff41b2c49128"
+            ]
+        ]
+    },
+    {
+        "id": "63c3047c55078120",
+        "type": "cronplus",
+        "z": "d9b281315f215091",
+        "name": "Job 5 min",
+        "outputField": "payload",
+        "timeZone": "America/Fortaleza",
+        "persistDynamic": false,
+        "commandResponseMsgOutput": "output1",
+        "outputs": 1,
+        "options": [
+            {
+                "name": "schedule1",
+                "topic": "topic1",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 */5 * ? * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 180,
+        "y": 200,
+        "wires": [
+            [
+                "a8cb36605a5b6ce0"
+            ]
+        ]
+    },
+    {
+        "id": "a8cb36605a5b6ce0",
+        "type": "file in",
+        "z": "d9b281315f215091",
+        "name": "SDM630 Modbus Map JSON",
+        "filename": "/home/pi/Documents/modbusMap.json",
+        "format": "lines",
+        "sendError": true,
+        "encoding": "none",
+        "allProps": true,
+        "x": 400,
+        "y": 200,
+        "wires": [
+            [
+                "66af469c3ca2b154"
+            ]
+        ]
+    },
+    {
+        "id": "219f69819ab9e85d",
+        "type": "modbus-flex-getter",
+        "z": "d9b281315f215091",
+        "name": "Request Message to SDM630",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "logIOActivities": false,
+        "server": "8d157a81fd3b6ec6",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": false,
+        "x": 1130,
+        "y": 200,
+        "wires": [
+            [
+                "63e332fa13c99496"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "66af469c3ca2b154",
+        "type": "json",
+        "z": "d9b281315f215091",
+        "name": "JSON to JS object",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 650,
+        "y": 200,
+        "wires": [
+            [
+                "a6cedb4cdd13dbbb"
+            ]
+        ]
+    },
+    {
+        "id": "a6cedb4cdd13dbbb",
+        "type": "delay",
+        "z": "d9b281315f215091",
+        "name": "Message Gate",
+        "pauseType": "rate",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "30",
+        "nbRateUnits": "10",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 860,
+        "y": 200,
+        "wires": [
+            [
+                "219f69819ab9e85d"
+            ]
+        ]
+    },
+    {
+        "id": "63e332fa13c99496",
+        "type": "switch",
+        "z": "d9b281315f215091",
+        "name": "Switch Data Type",
+        "property": "modbusRequest.value.type",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "float",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "int",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 250,
+        "y": 300,
+        "wires": [
+            [
+                "0b9806199a761211"
+            ],
+            [
+                "8243eeff6d3e30f4"
+            ]
+        ]
+    },
+    {
+        "id": "8243eeff6d3e30f4",
+        "type": "buffer-parser",
+        "z": "d9b281315f215091",
+        "name": "Int Converter",
+        "data": "payload",
+        "dataType": "msg",
+        "specification": "spec",
+        "specificationType": "ui",
+        "items": [
+            {
+                "type": "uint32be",
+                "name": "value",
+                "offset": 0,
+                "length": 1,
+                "offsetbit": 0,
+                "scale": "1",
+                "mask": ""
+            }
+        ],
+        "swap1": "",
+        "swap2": "",
+        "swap3": "",
+        "swap1Type": "swap",
+        "swap2Type": "swap",
+        "swap3Type": "swap",
+        "msgProperty": "payload",
+        "msgPropertyType": "str",
+        "resultType": "keyvalue",
+        "resultTypeType": "return",
+        "multipleResult": false,
+        "fanOutMultipleResult": false,
+        "setTopic": true,
+        "outputs": 1,
+        "x": 470,
+        "y": 320,
+        "wires": [
+            [
+                "602aff41b2c49128"
+            ]
+        ]
+    },
+    {
+        "id": "377bcc60e55c17af",
+        "type": "json",
+        "z": "d9b281315f215091",
+        "name": "JS object to JSON",
+        "property": "payload",
+        "action": "str",
+        "pretty": true,
+        "x": 1330,
+        "y": 300,
+        "wires": [
+            [
+                "c9df5d78d5cd93e0"
+            ]
+        ]
+    },
+    {
+        "id": "8059d6c2e5ed5f91",
+        "type": "mqtt-broker",
+        "name": "AWS IoT Core",
+        "broker": "a1wd8jjixduw6s-ats.iot.us-west-2.amazonaws.com",
+        "port": "8883",
+        "tls": "95d90ac9b3a46a5c",
+        "clientid": "raspberry-pi",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": false,
+        "birthTopic": "status",
+        "birthQos": "1",
+        "birthRetain": "true",
+        "birthPayload": "\"connected\"",
+        "birthMsg": {},
+        "closeTopic": "status",
+        "closeQos": "1",
+        "closeRetain": "true",
+        "closePayload": "\"disconnected\"",
+        "closeMsg": {},
+        "willTopic": "status",
+        "willQos": "1",
+        "willRetain": "true",
+        "willPayload": "\"unxpdisconnected\"",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "8d157a81fd3b6ec6",
+        "type": "modbus-client",
+        "name": "eastron",
+        "clienttype": "simpleser",
+        "bufferCommands": true,
+        "stateLogEnabled": true,
+        "queueLogEnabled": true,
+        "failureLogEnabled": true,
+        "tcpHost": "127.0.0.1",
+        "tcpPort": "502",
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB0",
+        "serialType": "RTU",
+        "serialBaudrate": "9600",
+        "serialDatabits": "8",
+        "serialStopbits": "1",
+        "serialParity": "none",
+        "serialConnectionDelay": "100",
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": "1",
+        "commandDelay": "1",
+        "clientTimeout": "1000",
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": "2000",
+        "parallelUnitIdsAllowed": true
+    },
+    {
+        "id": "95d90ac9b3a46a5c",
+        "type": "tls-config",
+        "name": "AWS Certificates",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "3cbb02fd5b3d2af635213df9bb14970c9339d76dce176f7badc43a00c28f92a4-certificate.pem.crt",
+        "keyname": "3cbb02fd5b3d2af635213df9bb14970c9339d76dce176f7badc43a00c28f92a4-private.pem.key",
+        "caname": "AmazonRootCA1.pem",
+        "servername": "",
+        "verifyservercert": true,
+        "alpnprotocol": ""
+    }
+]
